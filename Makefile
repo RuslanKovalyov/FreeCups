@@ -1,8 +1,8 @@
 .PHONY: help install migrate run test clean
 
-# Use local .venv Python
-PYTHON := .venv/bin/python
-PIP := .venv/bin/pip
+# Detect if venv is activated, otherwise use .venv
+PYTHON := $(shell command -v python3 2> /dev/null || echo python3)
+PIP := $(shell command -v pip 2> /dev/null || echo pip)
 
 help:
 	@echo "FreeCups - Available commands:"
@@ -14,6 +14,8 @@ help:
 	@echo "  make shell      - Open Django shell"
 	@echo "  make superuser  - Create superuser"
 	@echo "  make collectstatic - Collect static files"
+	@echo ""
+	@echo "Note: Make sure to activate venv first: source .venv/bin/activate"
 
 install:
 	$(PIP) install -r requirements.txt
