@@ -2,6 +2,11 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import User, Profile
 
+# Customize admin site titles
+admin.site.site_header = "Administration"
+admin.site.site_title = "Admin"
+admin.site.index_title = "FreeCups"
+
 class ProfileInline(admin.StackedInline):
     model = Profile
     can_delete = False
