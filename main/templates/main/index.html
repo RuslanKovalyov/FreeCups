@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreeCups</title>
+</head>
+<body>
+    {% if user.is_authenticated %}
+        <h1>Hello, {{ name }}! ☕🎉</h1>
+    {% else %}
+        <h1>Hello FreeCups! ☕🎉</h1>
+    {% endif %}
+    
+    <p>FreeCups project is running successfully!</p>
+    
+    {% if user.is_authenticated %}
+        <p>Email: {{ user.email }}</p>
+        {% if user.profile.is_buyer %}
+            <p>✓ Buyer</p>
+        {% endif %}
+        {% if user.profile.is_holder %}
+            <p>✓ Holder</p>
+        {% endif %}
+        <p><a href="{% url 'admin:index' %}">Go to Admin</a></p>
+    {% else %}
+        <p><a href="{% url 'admin:index' %}">Login</a></p>
+    {% endif %}
+</body>
+</html>
