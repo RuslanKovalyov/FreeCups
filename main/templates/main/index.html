@@ -22,9 +22,12 @@
         {% if user.profile.is_holder %}
             <p>✓ Holder</p>
         {% endif %}
-        <p><a href="{% url 'admin:index' %}">Go to Admin</a></p>
+        <p>
+            <a href="{% url 'admin:index' %}">Go to Admin</a> | 
+            <a href="{% url 'users:logout' %}">Logout</a>
+        </p>
     {% else %}
-        <p><a href="{% url 'admin:index' %}">Login</a></p>
+        <p><a href="{% url 'users:login' %}">Login</a></p>
     {% endif %}
 </body>
 </html>
