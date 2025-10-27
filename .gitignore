@@ -25,6 +25,7 @@ staticfiles/
 # Database
 *.db
 *.sqlite3
+migrations/
 
 # Redis
 dump.rdb
