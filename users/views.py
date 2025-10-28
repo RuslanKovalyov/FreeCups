@@ -18,8 +18,8 @@ def login_view(request):
     next_url = request.GET.get('next') or request.POST.get('next') or 'main:home'
     
     if request.method == 'POST':
-        # TODO: Add rate limiting check here (e.g., max 5 attempts per IP per 15 min)
-        # TODO: Add reCAPTCHA validation if enabled in settings
+        # TODO: Add rate limiting check per IP (brute force protection)
+        # TODO: Add reCAPTCHA
         
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
