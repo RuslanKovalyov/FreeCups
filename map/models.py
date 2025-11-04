@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.files.base import ContentFile
-from PIL import Image
+from PIL import Image, ImageOps
 from io import BytesIO
 
 
@@ -120,6 +120,9 @@ class Location(models.Model):
                 # Check if file has actual content
                 self.logo.file.seek(0)
                 img = Image.open(self.logo.file)
+                
+                # Fix orientation based on EXIF data (phone photos)
+                img = ImageOps.exif_transpose(img)
                 
                 # Convert to RGB if necessary
                 if img.mode in ('RGBA', 'LA', 'P'):
