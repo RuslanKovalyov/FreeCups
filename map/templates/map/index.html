@@ -244,7 +244,7 @@
         }).addTo(map);
         
         // Function to create custom marker icon with logo or text
-        function createMarkerIcon(type, logo, name, zoomLevel) {
+        function createMarkerIcon(type, logo, name, zoomLevel, isInView) {
             let bgColor, size, textLabel;
             
             // Adjust size based on zoom level
@@ -264,8 +264,8 @@
                 textLabel = 'BS';
             }
             
-            // Don't show logo if circle is too small (zoom < 10)
-            const showLogo = logo && zoomLevel >= 6;
+            // Only show logo if: zoom >= 10 AND marker is in viewport (lazy loading)
+            const showLogo = logo && zoomLevel >= 10 && isInView;
             
             let html;
             if (showLogo) {
@@ -286,7 +286,7 @@
                         height: ${size - 10}px;
                         border-radius: 50%;
                         object-fit: cover;
-                    " onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\\'color: white; font-weight: bold; font-size: ${size/3}px;\\'>${textLabel}</span>';">
+                    " onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\\'color: white; font-weight: bold; font-size: ${size/3}px;\\'>${textLabel}</span>';" loading="lazy">
                 </div>`;
             } else {
                 html = `<div style="
@@ -312,18 +312,26 @@
             });
         }
         
-        // Store markers for zoom updates
+        // Store markers for zoom/pan updates
         const allMarkers = [];
         
-        // Function to update all markers based on zoom
-        function updateMarkersOnZoom() {
+        // Function to check if marker is in current viewport
+        function isMarkerInView(marker) {
+            const bounds = map.getBounds();
+            return bounds.contains(marker.getLatLng());
+        }
+        
+        // Function to update all markers based on zoom and viewport
+        function updateMarkersOnZoomOrPan() {
             const currentZoom = map.getZoom();
             allMarkers.forEach(markerData => {
+                const inView = isMarkerInView(markerData.marker);
                 const newIcon = createMarkerIcon(
                     markerData.type, 
                     markerData.logo, 
                     markerData.name,
-                    currentZoom
+                    currentZoom,
+                    inView
                 );
                 markerData.marker.setIcon(newIcon);
             });
@@ -333,26 +341,27 @@
         locations.forEach(loc => {
             // Choose icon based on type
             const currentZoom = map.getZoom();
+            const marker = L.marker([loc.lat, loc.lng]);
+            const inView = map.getBounds().contains([loc.lat, loc.lng]);
             let icon;
             let zIndexOffset = 100; // Default z-index
             
             if (loc.type === 'buyer') {
-                icon = createMarkerIcon('buyer', loc.logo, loc.name, currentZoom);
+                icon = createMarkerIcon('buyer', loc.logo, loc.name, currentZoom, inView);
                 zIndexOffset = 200; // Buyers above businesses
             } else if (loc.type === 'holder') {
-                icon = createMarkerIcon('holder', loc.logo, loc.name, currentZoom);
+                icon = createMarkerIcon('holder', loc.logo, loc.name, currentZoom, inView);
                 zIndexOffset = 300; // Holders always on top
             } else if (loc.type === 'business') {
-                icon = createMarkerIcon('business', loc.logo, loc.name, currentZoom);
+                icon = createMarkerIcon('business', loc.logo, loc.name, currentZoom, inView);
                 zIndexOffset = 100; // Businesses at bottom
             }
             
-            const marker = L.marker([loc.lat, loc.lng], { 
-                icon: icon,
-                zIndexOffset: zIndexOffset 
-            }).addTo(map);
+            marker.setIcon(icon);
+            marker.setZIndexOffset(zIndexOffset);
+            marker.addTo(map);
             
-            // Store marker data for zoom updates
+            // Store marker data for zoom/pan updates
             allMarkers.push({
                 marker: marker,
                 type: loc.type,
@@ -421,8 +430,15 @@
             map.fitBounds(bounds, { padding: [50, 50] });
         }
         
-        // Update markers on zoom
-        map.on('zoomend', updateMarkersOnZoom);
+        // Update markers on zoom and pan (with debounce for performance)
+        let updateTimeout;
+        function debouncedUpdate() {
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(updateMarkersOnZoomOrPan, 200);
+        }
+        
+        map.on('zoomend', updateMarkersOnZoomOrPan);
+        map.on('moveend', debouncedUpdate);
     </script>
 </body>
 </html>
