@@ -29,12 +29,16 @@
             </div>
             
             <div class="button-group">
+                <a href="{% url 'map:index' %}" class="btn">View Map 🗺️</a>
                 <a href="{% url 'admin:index' %}" class="btn">Go to Admin</a>
                 <a href="{% url 'users:logout' %}" class="link">Logout</a>
             </div>
         {% else %}
             <p class="subtitle">Welcome! Please login to continue</p>
-            <a href="{% url 'users:login' %}" class="btn">Login</a>
+            <div class="button-group">
+                <a href="{% url 'map:index' %}" class="btn">View Map 🗺️</a>
+                <a href="{% url 'users:login' %}" class="btn">Login</a>
+            </div>
         {% endif %}
     </div>
 </body>

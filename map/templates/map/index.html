@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map - FreeCups</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #000;
+            color: white;
+        }
+        h1 {
+            color: white;
+        }
+        p a {
+            color: #4CAF50;
+        }
+        .filter-container {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: rgba(40, 40, 40, 0.95);
+            border-radius: 5px;
+            border: 1px solid #555;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .filter-row {
+            display: flex;
+            align-items: center;
+        }
+        .filter-row.full-width {
+            grid-column: 1 / -1;
+        }
+        .filter-container label {
+            margin-right: 15px;
+            font-weight: bold;
+            display: inline-block;
+            min-width: 140px;
+            color: #ddd;
+            flex-shrink: 0;
+        }
+        .filter-container select {
+            padding: 5px 10px;
+            border: 1px solid #555;
+            border-radius: 3px;
+            flex: 1;
+            background: #222;
+            color: #fff;
+        }
+        .filter-container a {
+            color: #4CAF50;
+            text-decoration: none;
+            padding: 5px 15px;
+            background: rgba(76, 175, 80, 0.2);
+            border-radius: 3px;
+            border: 1px solid #4CAF50;
+            text-align: center;
+            display: inline-block;
+            font-size: 12px;
+        }
+        .filter-container a:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+        .home-link {
+            color: #4CAF50;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .home-link:hover {
+            text-decoration: underline;
+        }
+        .filter-buttons {
+            display: flex;
+            justify-content: flex-end;
+            grid-column: 1 / -1;
+            padding-left: 155px;
+            margin-top: 10px;
+        }
+        .filter-buttons a {
+            width: 100%;
+        }
+        .buyer-color { background: #2196F3; }
+        .holder-color { background: #4CAF50; }
+        .business-color { background: #FFC107; }
+        
+        /* Legend positioned to the right of zoom controls - transparent with bold text */
+        .map-legend {
+            position: absolute;
+            top: 10px;
+            left: 50px;
+            background: transparent;
+            padding: 8px 10px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.5;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 60px;
+        }
+        .map-legend .legend-item {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            flex: 1;
+            min-height: 20px;
+        }
+        .map-legend .legend-color {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 6px;
+            flex-shrink: 0;
+        }
+        .map-legend span {
+            font-size: 12px;
+            color: #000;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.9);
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+        
+        #map {
+            height: 600px;
+            width: 100%;
+            border: 2px solid #333;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>FreeCups Map</h1>
+    <p><a href="{% url 'main:home' %}" class="home-link">← Back to Home</a></p>
+    
+    <div class="container">
+        <!-- Filter Controls -->
+        <div class="filter-container">
+            <form method="get" action="{% url 'map:index' %}" id="filterForm">
+            <div class="filter-row">
+                <label for="country">Country:</label>
+                <select name="country" id="country" onchange="document.getElementById('filterForm').submit()">
+                    <option value="">All Countries</option>
+                    {% for country in countries %}
+                        <option value="{{ country }}" {% if country == selected_country %}selected{% endif %}>
+                            {{ country }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-row">
+                <label for="type">Type:</label>
+                <select name="type" id="type" onchange="document.getElementById('filterForm').submit()">
+                    <option value="">All Types</option>
+                    <option value="buyer" {% if type_filter == 'buyer' %}selected{% endif %}>Only Buyers</option>
+                    <option value="holder" {% if type_filter == 'holder' %}selected{% endif %}>Only Holders</option>
+                    <option value="business" {% if type_filter == 'business' %}selected{% endif %}>Only Businesses</option>
+                </select>
+            </div>
+            
+            <div class="filter-row full-width">
+                <label for="category">Category:</label>
+                <select name="category" id="category" onchange="document.getElementById('filterForm').submit()">
+                    <option value="">All Categories</option>
+                    {% for cat_key, cat_label in categories %}
+                        <option value="{{ cat_key }}" {% if cat_key == category_filter %}selected{% endif %}>
+                            {{ cat_label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-buttons">
+                <a href="?country=">Clear Filters</a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Map Container -->
+    <div id="map"></div>
+    </div>
+    
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // Initialize map
+        const locations = [
+            {% for location in locations %}
+            {
+                id: {{ location.id }},
+                lat: {{ location.latitude }},
+                lng: {{ location.longitude }},
+                name: "{{ location.name|escapejs }}",
+                address: "{{ location.address|escapejs }}",
+                city: "{{ location.city|escapejs }}",
+                country: "{{ location.country|escapejs }}",
+                type: "{{ location.location_type }}",
+                category: "{{ location.category|escapejs }}",
+                category_display: "{{ location.get_category_display|escapejs }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+        
+        // Calculate map center based on filtered locations
+        let centerLat = 31.7683;  // Jerusalem default
+        let centerLng = 35.2137;
+        let zoomLevel = 13;
+        
+        if (locations.length > 0) {
+            const avgLat = locations.reduce((sum, loc) => sum + loc.lat, 0) / locations.length;
+            const avgLng = locations.reduce((sum, loc) => sum + loc.lng, 0) / locations.length;
+            centerLat = avgLat;
+            centerLng = avgLng;
+            
+            if (locations.length === 1) {
+                zoomLevel = 14;
+            } else {
+                zoomLevel = 10;
+            }
+        }
+        
+        const map = L.map('map').setView([centerLat, centerLng], zoomLevel);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // Define custom icons with colors
+        const buyerIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background-color: #2196F3; width: 25px; height: 25px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>',
+            iconSize: [25, 25],
+            iconAnchor: [12, 12]
+        });
+        
+        const holderIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background-color: #4CAF50; width: 25px; height: 25px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>',
+            iconSize: [25, 25],
+            iconAnchor: [12, 12]
+        });
+        
+        const businessIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background-color: #FFC107; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>',
+            iconSize: [15, 15],
+            iconAnchor: [7, 7]
+        });
+        
+        // Create markers - separate by type to control layering
+        const businessMarkers = [];
+        const buyerMarkers = [];
+        const holderMarkers = [];
+        
+        locations.forEach(loc => {
+            // Choose icon based on type
+            let icon;
+            let zIndexOffset = 100; // Default z-index
+            
+            if (loc.type === 'buyer') {
+                icon = buyerIcon;
+                zIndexOffset = 200; // Buyers above businesses
+            } else if (loc.type === 'holder') {
+                icon = holderIcon;
+                zIndexOffset = 300; // Holders always on top
+            } else if (loc.type === 'business') {
+                icon = businessIcon;
+                zIndexOffset = 100; // Businesses at bottom
+            }
+            
+            const marker = L.marker([loc.lat, loc.lng], { 
+                icon: icon,
+                zIndexOffset: zIndexOffset 
+            }).addTo(map);
+            // Build popup content
+            let typeLabel = '';
+            if (loc.type === 'buyer') {
+                typeLabel = 'Buyer 💳';
+            } else if (loc.type === 'holder') {
+                typeLabel = 'Holder 🏪';
+            } else if (loc.type === 'business') {
+                typeLabel = 'Business 🏢';
+            }
+            
+            let popupContent = `<strong>${loc.name}</strong><br>`;
+            popupContent += `<em>${typeLabel}</em><br>`;
+            if (loc.category) popupContent += `<strong>Category:</strong> ${loc.category_display}<br>`;
+            if (loc.address) popupContent += `${loc.address}<br>`;
+            if (loc.city) popupContent += `${loc.city}<br>`;
+            if (loc.country) popupContent += `${loc.country}`;
+            
+            marker.bindPopup(popupContent);
+        });
+        
+        // Add legend to the right of zoom controls
+        setTimeout(function() {
+            const legendDiv = document.createElement('div');
+            legendDiv.className = 'map-legend';
+            
+            let html = '';
+            
+            // Only show buyer legend if not filtering by holder/business
+            {% if type_filter != 'holder' and type_filter != 'business' %}
+            html += '<div class="legend-item">';
+            html += '<span class="legend-color buyer-color"></span>';
+            html += '<span>Buyers</span>';
+            html += '</div>';
+            {% endif %}
+            
+            // Only show holder legend if not filtering by buyer/business
+            {% if type_filter != 'buyer' and type_filter != 'business' %}
+            html += '<div class="legend-item">';
+            html += '<span class="legend-color holder-color"></span>';
+            html += '<span>Holders</span>';
+            html += '</div>';
+            {% endif %}
+            
+            // Only show business legend if not filtering by buyer/holder
+            {% if type_filter == 'business' or type_filter == '' %}
+            html += '<div class="legend-item">';
+            html += '<span class="legend-color business-color"></span>';
+            html += '<span>Business</span>';
+            html += '</div>';
+            {% endif %}
+            
+            legendDiv.innerHTML = html;
+            document.getElementById('map').appendChild(legendDiv);
+        }, 100);
+        
+        // Auto-fit bounds if multiple locations
+        if (locations.length > 1) {
+            const bounds = L.latLngBounds(locations.map(loc => [loc.lat, loc.lng]));
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+    </script>
+</body>
+</html>
