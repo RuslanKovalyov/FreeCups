@@ -75,7 +75,9 @@ def process_pending_geocodes():
 @receiver(post_save, sender=Location)
 def auto_queue_geocoding(sender, instance, created, **kwargs):
     """Automatically queue new locations for geocoding if they don't have coordinates."""
-    if instance.address and (not instance.latitude or not instance.longitude):
+    # Only geocode if address exists and BOTH coordinates are missing
+    # Don't run if updating existing location with coordinates
+    if instance.address and not instance.latitude and not instance.longitude:
         GeocodingQueue.add_to_queue(instance.id)
         thread = threading.Thread(target=GeocodingQueue.process_queue)
         thread.daemon = True

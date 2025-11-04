@@ -15,6 +15,10 @@ class LocationAdmin(admin.ModelAdmin):
         ('Basic Info', {
             'fields': ('name', 'location_type', 'category')
         }),
+        ('Logo', {
+            'fields': ('logo', 'logo_url'),
+            'description': 'Upload image file (auto-optimized to 100x100) OR paste external URL'
+        }),
         ('Coordinates', {
             'fields': ('latitude', 'longitude'),
             'description': 'Leave empty to auto-geocode from address. Processing happens within 1 minute.'

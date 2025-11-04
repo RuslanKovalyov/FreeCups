@@ -211,7 +211,8 @@
                 country: "{{ location.country|escapejs }}",
                 type: "{{ location.location_type }}",
                 category: "{{ location.category|escapejs }}",
-                category_display: "{{ location.get_category_display|escapejs }}"
+                category_display: "{{ location.get_category_display|escapejs }}",
+                logo: "{{ location.get_logo_url|escapejs }}"
             }{% if not forloop.last %},{% endif %}
             {% endfor %}
         ];
@@ -242,46 +243,107 @@
             maxZoom: 19
         }).addTo(map);
         
-        // Define custom icons with colors
-        const buyerIcon = L.divIcon({
-            className: 'custom-marker',
-            html: '<div style="background-color: #2196F3; width: 25px; height: 25px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>',
-            iconSize: [25, 25],
-            iconAnchor: [12, 12]
-        });
+        // Function to create custom marker icon with logo or text
+        function createMarkerIcon(type, logo, name, zoomLevel) {
+            let bgColor, size, textLabel;
+            
+            // Adjust size based on zoom level
+            const zoomFactor = Math.max(0.5, Math.min(1.5, zoomLevel / 13));
+            
+            if (type === 'buyer') {
+                bgColor = '#2196F3';
+                size = Math.round(40 * zoomFactor);
+                textLabel = 'BY';
+            } else if (type === 'holder') {
+                bgColor = '#4CAF50';
+                size = Math.round(40 * zoomFactor);
+                textLabel = 'HL';
+            } else {
+                bgColor = '#FFC107';
+                size = Math.round(30 * zoomFactor);
+                textLabel = 'BS';
+            }
+            
+            // Don't show logo if circle is too small (zoom < 10)
+            const showLogo = logo && zoomLevel >= 6;
+            
+            let html;
+            if (showLogo) {
+                html = `<div style="
+                    background-color: ${bgColor}80;
+                    width: ${size}px;
+                    height: ${size}px;
+                    border-radius: 50%;
+                    border: 3px solid white;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    overflow: hidden;
+                ">
+                    <img src="${logo}" style="
+                        width: ${size - 10}px;
+                        height: ${size - 10}px;
+                        border-radius: 50%;
+                        object-fit: cover;
+                    " onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\\'color: white; font-weight: bold; font-size: ${size/3}px;\\'>${textLabel}</span>';">
+                </div>`;
+            } else {
+                html = `<div style="
+                    background-color: ${bgColor}80;
+                    width: ${size}px;
+                    height: ${size}px;
+                    border-radius: 50%;
+                    border: 3px solid white;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
+                    <span style="color: white; font-weight: bold; font-size: ${size/3}px;">${textLabel}</span>
+                </div>`;
+            }
+            
+            return L.divIcon({
+                className: 'custom-marker',
+                html: html,
+                iconSize: [size, size],
+                iconAnchor: [size/2, size/2]
+            });
+        }
         
-        const holderIcon = L.divIcon({
-            className: 'custom-marker',
-            html: '<div style="background-color: #4CAF50; width: 25px; height: 25px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>',
-            iconSize: [25, 25],
-            iconAnchor: [12, 12]
-        });
+        // Store markers for zoom updates
+        const allMarkers = [];
         
-        const businessIcon = L.divIcon({
-            className: 'custom-marker',
-            html: '<div style="background-color: #FFC107; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>',
-            iconSize: [15, 15],
-            iconAnchor: [7, 7]
-        });
+        // Function to update all markers based on zoom
+        function updateMarkersOnZoom() {
+            const currentZoom = map.getZoom();
+            allMarkers.forEach(markerData => {
+                const newIcon = createMarkerIcon(
+                    markerData.type, 
+                    markerData.logo, 
+                    markerData.name,
+                    currentZoom
+                );
+                markerData.marker.setIcon(newIcon);
+            });
+        }
         
         // Create markers - separate by type to control layering
-        const businessMarkers = [];
-        const buyerMarkers = [];
-        const holderMarkers = [];
-        
         locations.forEach(loc => {
             // Choose icon based on type
+            const currentZoom = map.getZoom();
             let icon;
             let zIndexOffset = 100; // Default z-index
             
             if (loc.type === 'buyer') {
-                icon = buyerIcon;
+                icon = createMarkerIcon('buyer', loc.logo, loc.name, currentZoom);
                 zIndexOffset = 200; // Buyers above businesses
             } else if (loc.type === 'holder') {
-                icon = holderIcon;
+                icon = createMarkerIcon('holder', loc.logo, loc.name, currentZoom);
                 zIndexOffset = 300; // Holders always on top
             } else if (loc.type === 'business') {
-                icon = businessIcon;
+                icon = createMarkerIcon('business', loc.logo, loc.name, currentZoom);
                 zIndexOffset = 100; // Businesses at bottom
             }
             
@@ -289,6 +351,15 @@
                 icon: icon,
                 zIndexOffset: zIndexOffset 
             }).addTo(map);
+            
+            // Store marker data for zoom updates
+            allMarkers.push({
+                marker: marker,
+                type: loc.type,
+                logo: loc.logo,
+                name: loc.name
+            });
+            
             // Build popup content
             let typeLabel = '';
             if (loc.type === 'buyer') {
@@ -349,6 +420,9 @@
             const bounds = L.latLngBounds(locations.map(loc => [loc.lat, loc.lng]));
             map.fitBounds(bounds, { padding: [50, 50] });
         }
+        
+        // Update markers on zoom
+        map.on('zoomend', updateMarkersOnZoom);
     </script>
 </body>
 </html>
