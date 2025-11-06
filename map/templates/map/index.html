@@ -343,11 +343,10 @@
         }
         
         // Calculate map center based on filtered locations
-        let centerLat = 31.7683;  // Jerusalem default
-        let centerLng = 35.2137;
-        let zoomLevel = 13;
+        let centerLat, centerLng, zoomLevel;
         
         if (locations.length > 0) {
+            // Have results: center on them
             const avgLat = locations.reduce((sum, loc) => sum + loc.lat, 0) / locations.length;
             const avgLng = locations.reduce((sum, loc) => sum + loc.lng, 0) / locations.length;
             centerLat = avgLat;
@@ -358,6 +357,11 @@
             } else {
                 zoomLevel = 10;
             }
+        } else {
+            // No results or no filters: default to Israel view
+            centerLat = 31.5;
+            centerLng = 34.8;
+            zoomLevel = 8;
         }
         
         const map = L.map('map').setView([centerLat, centerLng], zoomLevel);
