@@ -192,22 +192,27 @@
         
         .map-wrapper {
             position: relative;
-            padding: 4px;
-            border-radius: 12px;
+            padding: 1.5px;
+            border-radius: 9.5px;
             background: linear-gradient(
                 90deg,
-                #60a5fa,
+                #4f46e5,
+                #7c3aed,
                 #a78bfa,
                 #ec4899,
                 #f97316,
                 #eab308,
                 #22c55e,
                 #06b6d4,
-                #60a5fa
+                #60a5fa,
+                #4f46e5
             );
-            background-size: 300% 300%;
-            animation: shimmer 4s ease infinite;
-            box-shadow: 0 0 20px rgba(96, 165, 250, 0.5);
+            background-size: 400% 400%;
+            animation: shimmer 6s ease infinite;
+            box-shadow: 
+                0 0 12px rgba(79, 70, 229, 0.45),
+                0 0 24px rgba(167, 139, 250, 0.3),
+                0 0 36px rgba(236, 72, 153, 0.18);
         }
         
         @keyframes shimmer {
@@ -228,6 +233,7 @@
             border: none;
             border-radius: 8px;
             background-color: transparent;
+            overflow: hidden;
         }
         
         /* Custom popup styling */
@@ -248,7 +254,6 @@
     </style>
 </head>
 <body>
-    <h1>FreeCups Map</h1>
     <p><a href="{% url 'main:home' %}" class="home-link">← Back to Home</a></p>
     
     <div class="container">
@@ -295,8 +300,10 @@
         </form>
     </div>
     
-    <!-- Map Container -->
-    <div id="map"></div>
+    <!-- Map Container with AI Border -->
+    <div class="map-wrapper">
+        <div id="map"></div>
+    </div>
     </div>
     
     <!-- Leaflet JavaScript -->
@@ -322,6 +329,18 @@
             }{% if not forloop.last %},{% endif %}
             {% endfor %}
         ];
+        
+        // Adjust map height based on filters
+        const mapElement = document.getElementById('map');
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasCountry = urlParams.get('country') && urlParams.get('country') !== '';
+        const hasType = urlParams.get('type') && urlParams.get('type') !== '';
+        const hasCategory = urlParams.get('category') && urlParams.get('category') !== '';
+        
+        if (!hasCountry && !hasType && !hasCategory) {
+            // No filters: much smaller map to fit mobile screens
+            mapElement.style.height = '400px';
+        }
         
         // Calculate map center based on filtered locations
         let centerLat = 31.7683;  // Jerusalem default
