@@ -242,7 +242,8 @@
                 type: "{{ location.location_type }}",
                 category: "{{ location.category|escapejs }}",
                 category_display: "{{ location.get_category_display|escapejs }}",
-                logo: "{{ location.get_logo_url|escapejs }}"
+                logo: "{{ location.get_company_logo_url|escapejs }}",
+                product_image: "{{ location.get_product_photo_url|escapejs }}"
             }{% if not forloop.last %},{% endif %}
             {% endfor %}
         ];
@@ -440,9 +441,28 @@
                 typeLabel = 'Business 🏢';
             }
             
-            let popupContent = `<strong>${loc.name}</strong><br>`;
+            let popupContent = '<div style="text-align: center;">';
+            
+            // Add company logo if available
+            if (loc.logo) {
+                popupContent += `<img src="${loc.logo}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onerror="this.style.display='none';">`;
+            } else {
+                // Placeholder icon if no logo
+                popupContent += `<div style="width: 80px; height: 80px; border-radius: 50%; background: #f0f0f0; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"><span style="font-size: 40px; color: #999;">📍</span></div>`;
+            }
+            
+            popupContent += '</div>';
+            popupContent += `<strong>${loc.name}</strong><br>`;
             popupContent += `<em>${typeLabel}</em><br>`;
             if (loc.category) popupContent += `<strong>Category:</strong> ${loc.category_display}<br>`;
+            
+            // Add product photo if available
+            if (loc.product_image) {
+                popupContent += '<div style="text-align: center; margin: 10px 0;">';
+                popupContent += `<img src="${loc.product_image}" style="max-width: 200px; max-height: 150px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); object-fit: cover;" onerror="this.style.display='none';">`;
+                popupContent += '</div>';
+            }
+            
             if (loc.address) popupContent += `${loc.address}<br>`;
             if (loc.city) popupContent += `${loc.city}<br>`;
             if (loc.country) popupContent += `${loc.country}`;

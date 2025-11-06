@@ -15,9 +15,13 @@ class LocationAdmin(admin.ModelAdmin):
         ('Basic Info', {
             'fields': ('name', 'location_type', 'category')
         }),
-        ('Logo', {
-            'fields': ('logo', 'logo_url'),
-            'description': 'Upload image file (auto-optimized to 100x100) OR paste external URL'
+        ('Company Logo', {
+            'fields': ('company_logo', 'company_logo_url'),
+            'description': 'Upload company/business logo (auto-optimized to 100x100) OR paste external URL'
+        }),
+        ('Product/Service Photo', {
+            'fields': ('product_photo', 'product_photo_url'),
+            'description': 'Upload product/service photo being offered or distributed (auto-optimized to 300x300) OR paste external URL'
         }),
         ('Coordinates', {
             'fields': ('latitude', 'longitude'),

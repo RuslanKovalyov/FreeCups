@@ -20,8 +20,14 @@ class Location(models.Model):
     # Type and basic info
     location_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default=TYPE_HOLDER)
     name = models.CharField(max_length=255, default='Unknown Location', help_text="Business/Company name")
-    logo = models.ImageField(upload_to='logos/', blank=True, null=True, help_text="Business logo (auto-optimized to 100x100)")
-    logo_url = models.URLField(blank=True, null=True, help_text="External logo URL (alternative to upload)")
+    
+    # Company/Business branding
+    company_logo = models.ImageField(upload_to='company_logos/', blank=True, null=True, help_text="Company/Business logo (auto-optimized to 100x100)")
+    company_logo_url = models.URLField(blank=True, null=True, help_text="External company logo URL (alternative to upload)")
+    
+    # Product/Service offering
+    product_photo = models.ImageField(upload_to='product_photos/', blank=True, null=True, help_text="Product/Service photo being offered or distributed (auto-optimized to 300x300)")
+    product_photo_url = models.URLField(blank=True, null=True, help_text="External product photo URL (alternative to upload)")
     
     # Business category (for TYPE_BUSINESS)
     CATEGORY_OFFICE_WORKERS = 'office_workers'
@@ -99,64 +105,101 @@ class Location(models.Model):
             self.country = self.country.strip().capitalize()
     
     def save(self, *args, **kwargs):
-        """Sanitize address and optimize logo image on save."""
+        """Sanitize address and optimize company logo and product photo on save."""
         # Clean address fields
         self.clean_address()
         
-        # Check if logo is a new upload (not just a path to existing file)
+        # Check if company_logo is a new upload (not just a path to existing file)
         logo_changed = False
+        old_logo = None
         if self.pk:
             try:
                 old_instance = Location.objects.get(pk=self.pk)
-                logo_changed = old_instance.logo != self.logo
+                logo_changed = old_instance.company_logo != self.company_logo
+                if logo_changed and old_instance.company_logo:
+                    old_logo = old_instance.company_logo
             except Location.DoesNotExist:
-                logo_changed = bool(self.logo)
+                logo_changed = bool(self.company_logo)
         else:
-            logo_changed = bool(self.logo)
+            logo_changed = bool(self.company_logo)
         
-        # Only process logo if it's a new file upload
-        if logo_changed and self.logo and hasattr(self.logo, 'file'):
+        # Only process company_logo if it's a new file upload
+        if logo_changed and self.company_logo and hasattr(self.company_logo, 'file'):
+            self._optimize_image(self.company_logo, 100, 100)
+            # Delete old logo file if it exists
+            if old_logo:
+                old_logo.delete(save=False)
+        
+        # Check if product_photo is a new upload
+        product_changed = False
+        old_photo = None
+        if self.pk:
             try:
-                # Check if file has actual content
-                self.logo.file.seek(0)
-                img = Image.open(self.logo.file)
-                
-                # Fix orientation based on EXIF data (phone photos)
-                img = ImageOps.exif_transpose(img)
-                
-                # Convert to RGB if necessary
-                if img.mode in ('RGBA', 'LA', 'P'):
-                    background = Image.new('RGB', img.size, (255, 255, 255))
-                    if img.mode == 'P':
-                        img = img.convert('RGBA')
-                    background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-                    img = background
-                
-                # Resize to 100x100 for fast loading
-                img.thumbnail((100, 100), Image.Resampling.LANCZOS)
-                
-                # Save optimized
-                output = BytesIO()
-                img.save(output, format='JPEG', quality=85, optimize=True)
-                output.seek(0)
-                
-                # Replace file
-                self.logo.save(
-                    self.logo.name,
-                    ContentFile(output.read()),
-                    save=False
-                )
-            except Exception as e:
-                # If logo processing fails, just skip it
-                pass
+                old_instance = Location.objects.get(pk=self.pk)
+                product_changed = old_instance.product_photo != self.product_photo
+                if product_changed and old_instance.product_photo:
+                    old_photo = old_instance.product_photo
+            except Location.DoesNotExist:
+                product_changed = bool(self.product_photo)
+        else:
+            product_changed = bool(self.product_photo)
+        
+        # Only process product_photo if it's a new file upload
+        if product_changed and self.product_photo and hasattr(self.product_photo, 'file'):
+            self._optimize_image(self.product_photo, 300, 300)
+            # Delete old photo file if it exists
+            if old_photo:
+                old_photo.delete(save=False)
         
         super().save(*args, **kwargs)
     
-    def get_logo_url(self):
-        """Get logo URL (uploaded file or external URL)."""
-        if self.logo:
-            return self.logo.url
-        return self.logo_url or ''
+    def _optimize_image(self, image_field, width, height):
+        """Helper method to optimize images."""
+        try:
+            # Check if file has actual content
+            image_field.file.seek(0)
+            img = Image.open(image_field.file)
+            
+            # Fix orientation based on EXIF data (phone photos)
+            img = ImageOps.exif_transpose(img)
+            
+            # Convert to RGB if necessary
+            if img.mode in ('RGBA', 'LA', 'P'):
+                background = Image.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                img = background
+            
+            # Resize to specified dimensions for fast loading
+            img.thumbnail((width, height), Image.Resampling.LANCZOS)
+            
+            # Save optimized
+            output = BytesIO()
+            img.save(output, format='JPEG', quality=85, optimize=True)
+            output.seek(0)
+            
+            # Replace file
+            image_field.save(
+                image_field.name,
+                ContentFile(output.read()),
+                save=False
+            )
+        except Exception as e:
+            # If image processing fails, just skip it
+            pass
+    
+    def get_company_logo_url(self):
+        """Get company logo URL (uploaded file or external URL)."""
+        if self.company_logo:
+            return self.company_logo.url
+        return self.company_logo_url or ''
+    
+    def get_product_photo_url(self):
+        """Get product photo URL (uploaded file or external URL)."""
+        if self.product_photo:
+            return self.product_photo.url
+        return self.product_photo_url or ''
     
     def has_coordinates(self):
         """Check if location has valid coordinates."""
