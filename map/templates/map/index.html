@@ -590,7 +590,7 @@
             
             // Center map on marker click with offset to prevent card from being cut off
             marker.on('click', function() {
-                const targetZoom = Math.max(map.getZoom(), 15);
+                const targetZoom = Math.max(map.getZoom(), 18);
                 const px = map.project(marker.getLatLng(), targetZoom);
                 
                 // Offset by 100 pixels down
