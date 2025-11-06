@@ -7,28 +7,34 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body {
+        html, body {
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            height: 100%;
             font-family: Arial, sans-serif;
-            background-color: #000;
-            color: white;
+            background: linear-gradient(135deg, #b2d2de 0%, #b2d2de 25%, #f2efea 60%, #f2efea 100%);
+            background-attachment: fixed;
+            color: #333;
+        }
+        body {
+            padding: 20px;
         }
         h1 {
-            color: white;
+            color: black;
         }
         p a {
-            color: #4CAF50;
+            color: black;
         }
         .filter-container {
             margin-bottom: 15px;
-            padding: 15px;
-            background: rgba(40, 40, 40, 0.95);
-            border-radius: 5px;
-            border: 1px solid #555;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 15px;
         }
         .filter-row {
             display: flex;
@@ -39,36 +45,55 @@
         }
         .filter-container label {
             margin-right: 15px;
-            font-weight: bold;
+            font-weight: 600;
             display: inline-block;
             min-width: 140px;
-            color: #ddd;
+            color: #2c3e50;
             flex-shrink: 0;
         }
         .filter-container select {
-            padding: 5px 10px;
-            border: 1px solid #555;
-            border-radius: 3px;
+            padding: 8px 12px;
+            border: 2px solid #b2d2de;
+            border-radius: 5px;
             flex: 1;
-            background: #222;
-            color: #fff;
+            background: white;
+            color: #2c3e50;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        .filter-container select:hover {
+            border-color: #8ab4c4;
+        }
+        .filter-container select:focus {
+            outline: none;
+            border-color: #b2d2de;
+            box-shadow: 0 0 0 3px rgba(178, 210, 222, 0.2);
         }
         .filter-container a {
-            color: #4CAF50;
+            color: white;
             text-decoration: none;
-            padding: 5px 15px;
-            background: rgba(76, 175, 80, 0.2);
-            border-radius: 3px;
-            border: 1px solid #4CAF50;
+            padding: 8px 20px;
+            background: #b2d2de;
+            border-radius: 5px;
+            border: none;
             text-align: center;
             display: inline-block;
-            font-size: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            transition: background 0.3s ease, transform 0.1s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         .filter-container a:hover {
-            background: rgba(76, 175, 80, 0.3);
+            background: #8ab4c4;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+        }
+        .filter-container a:active {
+            transform: translateY(0);
         }
         .home-link {
-            color: #4CAF50;
+            color: black;
             text-decoration: none;
             font-size: 16px;
         }
@@ -89,12 +114,14 @@
         .holder-color { background: #4CAF50; }
         .business-color { background: #FFC107; }
         
-        /* Legend positioned to the right of zoom controls - gray transparent background */
+        /* Legend positioned at bottom-left corner with same gaps as zoom controls */
         .map-legend {
             position: absolute;
-            top: 10px;
-            left: 50px;
+            bottom: 10px;
+            left: 10px;
             background: rgba(128, 128, 128, 0.7);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
             padding: 8px 10px;
             font-family: Arial, sans-serif;
             font-size: 12px;
@@ -126,7 +153,7 @@
         .map-legend span {
             font-size: 12px;
             color: black;
-            font-weight: bold;
+            font-weight: normal;
         }
         
         /* Make Leaflet zoom controls and layer switcher semi-transparent gray */
@@ -166,9 +193,26 @@
         #map {
             height: 600px;
             width: 100%;
-            border: 2px solid #333;
-            border-radius: 5px;
-            background-color: #000;
+            border: none;
+            border-radius: 8px;
+            background-color: transparent;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Custom popup styling */
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            padding: 0;
+            box-shadow: 0 3px 14px rgba(0,0,0,0.2);
+        }
+        
+        .leaflet-popup-content {
+            margin: 0;
+            line-height: 1.4;
+        }
+        
+        .leaflet-popup-tip {
+            box-shadow: 0 3px 14px rgba(0,0,0,0.2);
         }
     </style>
 </head>
@@ -289,8 +333,8 @@
             maxZoom: 19
         });
         
-        // Add default layer (dark map)
-        darkMap.addTo(map);
+        // Add default layer (street map)
+        streetMap.addTo(map);
         
         // Add layer control
         const baseMaps = {
@@ -431,47 +475,79 @@
                 name: loc.name
             });
             
-            // Build popup content
+            // Build popup content with modern styling
             let typeLabel = '';
+            let typeColor = '';
             if (loc.type === 'buyer') {
                 typeLabel = 'Buyer 💳';
+                typeColor = '#2196F3';
             } else if (loc.type === 'holder') {
                 typeLabel = 'Holder 🏪';
+                typeColor = '#4CAF50';
             } else if (loc.type === 'business') {
                 typeLabel = 'Business 🏢';
+                typeColor = '#FFC107';
             }
             
-            let popupContent = '<div style="text-align: center;">';
+            let popupContent = '<div style="font-family: Arial, sans-serif; max-width: 220px; padding: 8px;">';
+            
+            // Header with logo and name
+            popupContent += '<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">';
             
             // Add company logo if available
             if (loc.logo) {
-                popupContent += `<img src="${loc.logo}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onerror="this.style.display='none';">`;
+                popupContent += `<img src="${loc.logo}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid ${typeColor};" onerror="this.style.display='none';">`;
             } else {
                 // Placeholder icon if no logo
-                popupContent += `<div style="width: 80px; height: 80px; border-radius: 50%; background: #f0f0f0; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"><span style="font-size: 40px; color: #999;">📍</span></div>`;
+                popupContent += `<div style="width: 50px; height: 50px; border-radius: 50%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px solid ${typeColor};"><span style="font-size: 24px;">📍</span></div>`;
             }
             
+            // Name and type
+            popupContent += '<div style="flex: 1; min-width: 0;">';
+            popupContent += `<div style="font-weight: 600; font-size: 14px; color: #2c3e50; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${loc.name}</div>`;
+            popupContent += `<div style="font-size: 11px; color: white; background: ${typeColor}; display: inline-block; padding: 2px 8px; border-radius: 12px;">${typeLabel}</div>`;
             popupContent += '</div>';
-            popupContent += `<strong>${loc.name}</strong><br>`;
-            popupContent += `<em>${typeLabel}</em><br>`;
-            if (loc.category) popupContent += `<strong>Category:</strong> ${loc.category_display}<br>`;
+            popupContent += '</div>';
+            
+            // Category if available
+            if (loc.category) {
+                popupContent += `<div style="font-size: 12px; color: #7f8c8d; margin-bottom: 8px; padding: 4px 8px; background: #f8f9fa; border-radius: 4px;"><strong>Category:</strong> ${loc.category_display}</div>`;
+            }
             
             // Add product photo if available
             if (loc.product_image) {
-                popupContent += '<div style="text-align: center; margin: 10px 0;">';
-                popupContent += `<img src="${loc.product_image}" style="max-width: 200px; max-height: 150px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); object-fit: cover;" onerror="this.style.display='none';">`;
+                popupContent += '<div style="margin: 8px 0;">';
+                popupContent += `<img src="${loc.product_image}" style="width: 100%; height: 120px; border-radius: 6px; object-fit: cover; border: 1px solid #e0e0e0;" onerror="this.style.display='none';">`;
                 popupContent += '</div>';
             }
             
-            if (loc.address) popupContent += `${loc.address}<br>`;
-            if (loc.city) popupContent += `${loc.city}<br>`;
-            if (loc.country) popupContent += `${loc.country}`;
+            // Address section
+            if (loc.address || loc.city || loc.country) {
+                popupContent += '<div style="font-size: 11px; color: #7f8c8d; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">';
+                if (loc.address) popupContent += `📍 ${loc.address}<br>`;
+                if (loc.city || loc.country) {
+                    popupContent += `${loc.city ? loc.city : ''}${loc.city && loc.country ? ', ' : ''}${loc.country ? loc.country : ''}`;
+                }
+                popupContent += '</div>';
+            }
             
-            marker.bindPopup(popupContent);
+            popupContent += '</div>';
             
-            // Center map on marker click
+            marker.bindPopup(popupContent, {
+                maxWidth: 240,
+                className: 'custom-popup'
+            });
+            
+            // Center map on marker click with offset to prevent card from being cut off
             marker.on('click', function() {
-                map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15));
+                const targetZoom = Math.max(map.getZoom(), 15);
+                const px = map.project(marker.getLatLng(), targetZoom);
+                
+                // Offset by 100 pixels down
+                px.y -= 100;
+                
+                const offsetLatLng = map.unproject(px, targetZoom);
+                map.setView(offsetLatLng, targetZoom);
             });
         });
         
