@@ -303,21 +303,24 @@
         
         // Function to create custom marker icon with logo or text
         function createMarkerIcon(type, logo, name, zoomLevel, isInView) {
-            let bgColor, size, textLabel;
+            let bgColor, borderColor, size, textLabel;
             
             // Adjust size based on zoom level
             const zoomFactor = Math.max(0.5, Math.min(1.5, zoomLevel / 13));
             
             if (type === 'buyer') {
                 bgColor = '#2196F3';
+                borderColor = '#0D47A1'; // Dark blue - more contrast
                 size = Math.round(40 * zoomFactor);
                 textLabel = 'BY';
             } else if (type === 'holder') {
                 bgColor = '#4CAF50';
+                borderColor = '#1B5E20'; // Dark green - more contrast
                 size = Math.round(40 * zoomFactor);
                 textLabel = 'HL';
             } else {
                 bgColor = '#FFC107';
+                borderColor = '#F57F17'; // Dark yellow/amber - more contrast
                 size = Math.round(30 * zoomFactor);
                 textLabel = 'BS';
             }
@@ -332,7 +335,7 @@
                     width: ${size}px;
                     height: ${size}px;
                     border-radius: 50%;
-                    border: 3px solid white;
+                    border: 1px solid ${borderColor};
                     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
                     display: flex;
                     align-items: center;
@@ -340,8 +343,8 @@
                     overflow: hidden;
                 ">
                     <img src="${logo}" style="
-                        width: ${size - 10}px;
-                        height: ${size - 10}px;
+                        width: ${size - 4}px;
+                        height: ${size - 4}px;
                         border-radius: 50%;
                         object-fit: cover;
                     " onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\\'color: white; font-weight: bold; font-size: ${size/3}px;\\'>${textLabel}</span>';" loading="lazy">
@@ -352,7 +355,7 @@
                     width: ${size}px;
                     height: ${size}px;
                     border-radius: 50%;
-                    border: 3px solid white;
+                    border: 1px solid ${borderColor};
                     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
                     display: flex;
                     align-items: center;
